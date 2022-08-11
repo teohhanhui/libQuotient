@@ -2481,7 +2481,8 @@ void Room::uploadFile(const QString& id, const QUrl& localFilename,
                     emit fileTransferCompleted(id, localFilename, fileMetadata);
                 });
         connect(job, &BaseJob::failure, this,
-                std::bind(&Private::failedTransfer, d, id, job->errorString()));
+                std::bind_front(&Private::failedTransfer, d, id,
+                                job->errorString()));
         emit newFileTransfer(id, localFilename);
     } else
         d->failedTransfer(id);
@@ -2549,8 +2550,8 @@ void Room::downloadFile(const QString& eventId, const QUrl& localFilename)
                 eventId, fileUrl, QUrl::fromLocalFile(job->targetFileName()));
         });
         connect(job, &BaseJob::failure, this,
-                std::bind(&Private::failedTransfer, d, eventId,
-                          job->errorString()));
+                std::bind_front(&Private::failedTransfer, d, eventId,
+                                job->errorString()));
         emit newFileTransfer(eventId, localFilename);
     } else
         d->failedTransfer(eventId);
