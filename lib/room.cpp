@@ -227,7 +227,7 @@ public:
                                << evtKey.first << evtKey.second << "}";
                 qCDebug(STATE) << "Stubbed state size:" << stubbedState.size();
             }
-            evt = stubbedState[evtKey].get();
+            evt = std::to_address(stubbedState[evtKey]);
             Q_ASSERT(evt);
         }
         Q_ASSERT(evt->matrixType() == evtKey.first
@@ -2055,7 +2055,7 @@ QString Room::Private::doSendEvent(const RoomEvent* pEvent)
             encryptedEvent->setRelation(pEvent->contentJson()["m.relates_to"_ls].toObject());
         }
         // We show the unencrypted event locally while pending. The echo check will throw the encrypted version out
-        _event = encryptedEvent.get();
+        _event = std::to_address(encryptedEvent);
 #endif
     }
 
@@ -2719,7 +2719,7 @@ bool Room::Private::processRedaction(const RedactionEvent& redaction)
         const auto currentStateEvt =
             currentState.get(oldEvent->matrixType(), oldEvent->stateKey());
         Q_ASSERT(currentStateEvt);
-        if (currentStateEvt == oldEvent.get()) {
+        if (currentStateEvt == std::to_address(oldEvent)) {
             // Historical states can't be in currentState
             Q_ASSERT(ti.index() >= 0);
             qCDebug(STATE).nospace()

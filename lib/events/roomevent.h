@@ -52,7 +52,10 @@ public:
 
 #ifdef Quotient_E2EE_ENABLED
     void setOriginalEvent(event_ptr_tt<RoomEvent>&& originalEvent);
-    const RoomEvent* originalEvent() const { return _originalEvent.get(); }
+    const RoomEvent* originalEvent() const
+    {
+        return std::to_address(_originalEvent);
+    }
     const QJsonObject encryptedJson() const;
 #endif
 
