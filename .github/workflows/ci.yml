@@ -34,7 +34,7 @@ jobs:
         - os: macos-11
           e2ee: e2ee
         include:
-        - os: windows-2019
+        - os: windows-2022
           qt-version: '5.15'
           compiler: MSVC
           e2ee: e2ee
@@ -55,7 +55,7 @@ jobs:
         - os: ubuntu-22.04
           qt-version: '5.15'
           update-api: update-api
-        - os: windows-2019
+        - os: windows-2022
           qt-version: '6.4'
           compiler: MSVC
           e2ee: e2ee
@@ -146,6 +146,7 @@ jobs:
       if: matrix.compiler == 'MSVC'
       with:
         arch: x64
+        vsversion: '2022'
 
     - name: Download and set up Sonar Cloud tools
       if: matrix.static-analysis == 'sonar'
