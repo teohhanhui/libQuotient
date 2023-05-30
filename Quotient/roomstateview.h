@@ -129,10 +129,12 @@ public:
     //! type is unknown at compile time.
     //! \return an Omittable with either the result of the function call, or
     //!         with `none` if the event is not found or the function fails
-    template <typename FnT>
-    auto query(const QString& evtType, const QString& stateKey, FnT&& fn) const
+    template <typename FnT, typename... ArgTs>
+    auto query(const QString& evtType, const QString& stateKey, FnT&& fn,
+               ArgTs&&... args) const
     {
-        return lift(std::forward<FnT>(fn), get(evtType, stateKey));
+        return lift(std::forward<FnT>(fn), get(evtType, stateKey),
+                    std::forward<ArgTs>(args)...);
     }
 
     //! \brief Run a function on a state event with the given type and key
@@ -141,11 +143,14 @@ public:
     //! `needsStateKey == true`) with type defined at compile time.
     //! \return an Omittable with either the result of the function call, or
     //!         with `none` if the event is not found or the function fails
-    template <Keyed_State_Fn FnT>
-    auto query(const QString& stateKey, FnT&& fn) const
+    template <Keyed_State_Fn FnT, typename... ArgTs>
+    auto query(const QString& stateKey, FnT&& fn, ArgTs&&... args) const
     {
-        using EventT = std::decay_t<fn_arg_t<FnT>>;
-        return lift(std::forward<FnT>(fn), get<EventT>(stateKey));
+        using EventT = std::decay_t<fn_arg_t<FnT, 0>>;
+        // lift() only accepts args that can be dereferenced but query()
+        // expects "normal" arguments instead - hence &args
+        return lift(std::forward<FnT>(fn), get<EventT>(stateKey),
+                    std::forward<decltype(&args)>(&args)...);
     }
 
     //! \brief Run a function on a keyless state event with the given type
@@ -154,11 +159,13 @@ public:
     //! `needsStateKey == false`) with type defined at compile time.
     //! \return an Omittable with either the result of the function call, or
     //!         with `none` if the event is not found or the function fails
-    template <Keyless_State_Fn FnT>
-    auto query(FnT&& fn) const
+    template <Keyless_State_Fn FnT, typename... ArgTs>
+    auto query(FnT&& fn, ArgTs&&... args) const
     {
         using EventT = std::decay_t<fn_arg_t<FnT>>;
-        return lift(std::forward<FnT>(fn), get<EventT>());
+        // See the comment in the previous overload on &args
+        return lift(std::forward<FnT>(fn), get<EventT>(),
+                    std::forward<decltype(&args)>(&args)...);
     }
 
     //! \brief Same as query() but with a fallback value
