@@ -19,11 +19,12 @@
 
 #include "events/accountdataevents.h"
 #include "events/encryptedevent.h"
+#include "events/eventrelation.h"
+#include "events/roomcreateevent.h"
 #include "events/roomkeyevent.h"
 #include "events/roommessageevent.h"
-#include "events/roomcreateevent.h"
+#include "events/roompowerlevelsevent.h"
 #include "events/roomtombstoneevent.h"
-#include "events/eventrelation.h"
 
 #include <QtCore/QJsonObject>
 #include <QtGui/QImage>
@@ -645,7 +646,84 @@ public:
 
     Q_INVOKABLE bool supportsCalls() const;
 
-    /// Whether the current user is allowed to upgrade the room
+    //! \brief Check the effective power level of a user in this room
+    //!
+    //! This is normally the same as calling
+    //! \code
+    //! RoomPowerLevelEvent::powerLevelForUser(userId)
+    //! \endcode
+    //! on the room's currentState() but also works when there's no power level event in the room.
+    //! It is THE recommended way to get a room member's power level to display in the UI.
+    //! \param userId to check; if empty, the current user is checked
+    //! \sa https://spec.matrix.org/v1.7/client-server-api/#mroompower_levels
+    Q_INVOKABLE int effectivePowerLevel(const QString& userId = {}) const;
+
+    //! \brief Check whether a user is allowed to send (non-state) events of the given type
+    //!
+    //! This function doesn't check whether the event type actually corresponds to a message event.
+    //! If used on state event types, it may return incorrect results (likely false-positives).
+    //! \param userId to check; if empty, the current user is checked
+    //! \sa canSetState
+    Q_INVOKABLE bool canSendEvents(const QString& eventTypeId, const QString& userId = {}) const;
+
+    //! \brief Check whether a user is allowed to send state events of the given type
+    //! \param userId to check; if empty, the current user is checked
+    //! \sa canSendMessageEvents
+    Q_INVOKABLE bool canSetState(const QString &stateEventTypeId, const QString &userId = {}) const;
+
+    //! \brief Check whether a user is allowed to send events of the given type
+    //!
+    //! This works pretty much the same as canSendEvents() and canSetState() but requires
+    //! the event type to be known at compile time. For that case, is faster and safer than its
+    //! runtime counterparts.
+    //! \tparam EvT the event type to check the power level for
+    //! \param userId to check; if empty, the current user is checked
+    //! \sa https://spec.matrix.org/v1.7/client-server-api/#mroompower_levels
+    template <EventClass EvT>
+    bool canSend(const QString& userId = {}) const
+    {
+        return effectivePowerLevel(userId) >= powerLevelFor<EvT>();
+    }
+
+    //! \brief Get the power level required to send (non-state) events of the given type
+    //!
+    //! \note This is a generic method that only gets the power level to send events with a given
+    //!       type. Some operations have additional restrictions or enablers though: e.g.,
+    //!       room member changes (kicks, invites) have special power levels; while redactions are
+    //!       allowed on your own messages regardless of the power level. To check effective ability
+    //!       to perform an operation, use Room's can*() methods instead of checking the power
+    //!       levels directly.
+    Q_INVOKABLE int powerLevelToSendEvents(const QString& eventTypeId) const;
+
+    //! \brief Get the power level required to send state events of the given type
+    //!
+    //! \note This is a generic method that only gets the power level to send events with a given
+    //!       type. Some operations have additional restrictions or enablers though: e.g.,
+    //!       room member changes (kicks, invites) have special power levels; while redactions are
+    //!       allowed on your own messages regardless of the power level. To check effective ability
+    //!       to perform an operation, use Room's can*() methods instead of checking the power
+    //!       levels directly.
+    Q_INVOKABLE int powerLevelToSetState(const QString& eventTypeId) const;
+
+    //! \brief Get the power level required to send events of the given type
+    //!
+    //! This is the same as powerLevelToSendEvents() and powerLevelToSetState() (with the same
+    //! caveat mentioned in the respective note) but can be used when the event type is known at
+    //! compile time.
+    //! \tparam EvT the event type to get the power level for
+    template <EventClass EvT>
+    int powerLevelFor() const
+    {
+        return currentState().queryOr(&RoomPowerLevelsEvent::powerLevelForEventType<EvT>,
+                                      DefaultPowerLevel<EvT>);
+    }
+
+    //! Check whether the current user is allowed to redact events from another user
+    Q_INVOKABLE bool canRedactEventsOf(const QString& otherUserId) const;
+
+    //! \brief Check whether the current user is allowed to upgrade the room
+    //! \return false for rooms already upgraded (i.e. with the tombstone event); the result of
+    //!         canSend<RoomTombstoneEvent>() for rooms that were not upgraded
     Q_INVOKABLE bool canSwitchVersions() const;
 
     /// \brief Get the current room state

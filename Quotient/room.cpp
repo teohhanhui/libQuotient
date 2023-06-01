@@ -1006,19 +1006,56 @@ void Room::markAllMessagesAsRead()
     d->markMessagesAsRead(d->timeline.crbegin());
 }
 
+int Room::effectivePowerLevel(const QString& userId) const
+{
+    const auto& uId = !userId.isEmpty() ? userId : connection()->userId();
+    const auto& curState = currentState();
+    if (const auto* plEvent = curState.get<RoomPowerLevelsEvent>())
+        return plEvent->powerLevelForUser(uId);
+    if (const auto* createEvent = creation())
+        return static_cast<int>(createEvent->senderId() == uId) * 100;
+    return 0; // That's rather weird but may happen, according to rvdh
+}
+
+bool Room::canSendEvents(const QString& eventTypeId, const QString& userId) const
+{
+    return effectivePowerLevel(userId) >= powerLevelToSendEvents(eventTypeId);
+}
+
+bool Room::canSetState(const QString& stateEventTypeId, const QString& userId) const
+{
+    return effectivePowerLevel(userId) >= powerLevelToSetState(stateEventTypeId);
+}
+
+int Room::powerLevelToSendEvents(const QString& eventTypeId) const
+{
+    return currentState()
+        .query(&RoomPowerLevelsEvent::powerLevelForEvent, eventTypeId)
+        .value_or(DefaultPowerLevel<Event>);
+}
+
+int Room::powerLevelToSetState(const QString& eventTypeId) const
+{
+    return currentState()
+        .query(&RoomPowerLevelsEvent::powerLevelForState, eventTypeId)
+        .value_or(DefaultPowerLevel<StateEvent>);
+}
+
+bool Room::canRedactEventsOf(const QString& otherUserId) const
+{
+    const auto localUserId = localMember().id();
+    return localUserId == otherUserId
+           || currentState().queryOr(
+               [&localUserId](const Quotient::RoomPowerLevelsEvent& plEvt) {
+                   return plEvt.powerLevelForUser(localUserId) >= plEvt.redact();
+               },
+               true);
+}
+
 bool Room::canSwitchVersions() const
 {
-    if (!successorId().isEmpty())
-        return false; // No one can upgrade a room that's already upgraded
-
-    if (const auto* plEvt = currentState().get<RoomPowerLevelsEvent>()) {
-        const auto currentUserLevel =
-            plEvt->powerLevelForUser(localMember().id());
-        const auto tombstonePowerLevel =
-            plEvt->powerLevelForState("m.room.tombstone"_ls);
-        return currentUserLevel >= tombstonePowerLevel;
-    }
-    return true;
+    // No one can upgrade a room that's already upgraded
+    return successorId().isEmpty() && canSend<RoomTombstoneEvent>();
 }
 
 bool Room::isEventNotable(const TimelineItem &ti) const
@@ -1907,6 +1944,14 @@ QString Room::Private::sendEvent(RoomEventPtr&& event)
 QString Room::Private::doSendEvent(const RoomEvent* pEvent)
 {
     const auto txnId = pEvent->transactionId();
+    if (!q->canSendEvents(pEvent->matrixType())) {
+        qCWarning(MESSAGES).noquote()
+            << connection->userId() << "is not allowed to send"
+            << pEvent->matrixType() << "events; transaction" << txnId
+            << "will not proceed";
+        return {};
+    }
+
     // TODO, #133: Enqueue the job rather than immediately trigger it.
     const RoomEvent* _event = pEvent;
     std::unique_ptr<EncryptedEvent> encryptedEvent;

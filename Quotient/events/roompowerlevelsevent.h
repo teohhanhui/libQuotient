@@ -6,6 +6,15 @@
 #include "stateevent.h"
 
 namespace Quotient {
+
+//! \brief Default power levels used in absence of a power level event
+//!
+//! It's not recommended to use this directly; Room::can*() functions calculate effective ability
+//! to perform certain operations, and Room::powerLevelFor*() returns the necessary power level for
+//! an operation given the current room state.
+template <EventClass EvT>
+constexpr inline auto DefaultPowerLevel = std::is_base_of_v<StateEvent, EvT> ? 50 : 0;
+
 struct QUOTIENT_API PowerLevelsEventContent {
     struct Notifications {
         int room;
@@ -52,8 +61,36 @@ public:
 
     int roomNotification() const { return content().notifications.room; }
 
+    //! \brief Get the power level for message events of a given type
+    //!
+    //! \note You normally should not compare power levels returned from this
+    //!       and other powerLevelFor*() functions directly; use
+    //!       Room::canSendEvents() instead
     int powerLevelForEvent(const QString& eventTypeId) const;
+
+    //! \brief Get the power level for state events of a given type
+    //!
+    //! \note You normally should not compare power levels returned from this
+    //!       and other powerLevelFor*() functions directly; use
+    //!       Room::canSetState() instead
     int powerLevelForState(const QString& eventTypeId) const;
+
+    //! \brief Get the power level for a given user
+    //!
+    //! \note You normally should not directly use power levels returned by this
+    //!       and other powerLevelFor*() functions; use Room API instead
+    //! \sa Room::canSend, Room::canSendEvents, Room::canSetState,
+    //!     Room::effectivePowerLevel
     int powerLevelForUser(const QString& userId) const;
+
+    template <EventClass EvT>
+    int powerLevelForEventType() const
+    {
+        if constexpr (std::is_base_of_v<StateEvent, EvT>) {
+            return powerLevelForState(EvT::TypeId);
+        } else {
+            return powerLevelForEvent(EvT::TypeId);
+        }
+    }
 };
 } // namespace Quotient
