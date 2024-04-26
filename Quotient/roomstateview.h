@@ -131,6 +131,7 @@ public:
     //!         with `none` if the event is not found or the function fails
     template <typename FnT>
     auto query(const QString& evtType, const QString& stateKey, FnT&& fn, auto&&... args) const
+        requires std::invocable<FnT, fn_arg_t<FnT, 0>, decltype(args)...>
     {
         // lift() only accepts args that can be dereferenced but query()
         // expects "normal" arguments instead - hence &args
@@ -146,6 +147,7 @@ public:
     //!         with `none` if the event is not found or the function fails
     template <Keyed_State_Fn FnT>
     auto query(const QString& stateKey, FnT&& fn, auto&&... args) const
+        requires std::invocable<FnT, fn_arg_t<FnT, 0>, decltype(args)...>
     {
         using EventT = std::decay_t<fn_arg_t<FnT, 0>>;
         // See the comment in the first overload on &args
@@ -161,6 +163,7 @@ public:
     //!         with `none` if the event is not found or the function fails
     template <Keyless_State_Fn FnT>
     auto query(FnT&& fn, auto&&... args) const
+        requires std::invocable<FnT, fn_arg_t<FnT, 0>, decltype(args)...>
     {
         using EventT = std::decay_t<fn_arg_t<FnT>>;
         // See the comment in the first overload on &args
