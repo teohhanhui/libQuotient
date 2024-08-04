@@ -285,15 +285,13 @@ void Database::storeOlmAccount(const QOlmAccount& olmAccount)
     commit();
 }
 
-std::optional<OlmErrorCode> Database::setupOlmAccount(QOlmAccount& olmAccount)
+QOlmAccount *Database::setupOlmAccount(const QString& userId, const QString& deviceId)
 {
     auto query = prepareQuery(QStringLiteral("SELECT pickle FROM accounts;"));
     execute(query);
     if (query.next())
-        return olmAccount.unpickle(
-            query.value(QStringLiteral("pickle")).toByteArray(), m_picklingKey);
-
-    olmAccount.setupNewAccount();
+        return QOlmAccount::unpickle(query.value(QStringLiteral("pickle")).toByteArray(), m_picklingKey, nullptr);
+    return QOlmAccount::newAccount(nullptr/*TODO*/, userId, deviceId);
     return {};
 }
 

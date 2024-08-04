@@ -323,6 +323,8 @@ void Connection::Private::completeSetup(const QString& mxId, bool mock)
         if (auto&& maybeEncryptionData =
                 _impl::ConnectionEncryptionData::setup(q, mock)) {
             encryptionData = std::move(*maybeEncryptionData);
+            connect(encryptionData->olmAccount, &QOlmAccount::needsSave, q,
+                    [this] { encryptionData->saveOlmAccount(); });
         } else {
             useEncryption = false;
             emit q->encryptionChanged(false);
@@ -1101,7 +1103,7 @@ bool Connection::isLoggedIn() const { return !accessToken().isEmpty(); }
 
 QOlmAccount* Connection::olmAccount() const
 {
-    return d->encryptionData ? &d->encryptionData->olmAccount : nullptr;
+    return d->encryptionData ? d->encryptionData->olmAccount : nullptr;
 }
 
 SyncJob* Connection::syncJob() const { return d->syncJob; }
