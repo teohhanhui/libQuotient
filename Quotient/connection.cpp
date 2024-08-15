@@ -97,11 +97,11 @@ void Connection::resolveServer(const QString& mxid)
     qCDebug(MAIN) << "Finding the server" << maybeBaseUrl.host();
 
     const auto& oldBaseUrl = d->data->baseUrl();
-    d->data->setBaseUrl(maybeBaseUrl); // Temporarily set it for this one call
+    d->data->setBaseUrl(maybeBaseUrl, this); // Temporarily set it for this one call
     d->resolverJob = callApi<GetWellknownJob>();
     // Make sure baseUrl is restored in any case, even an abandon, and before any further processing
     connect(d->resolverJob.get(), &BaseJob::finished, this,
-            [this, oldBaseUrl] { d->data->setBaseUrl(oldBaseUrl); });
+            [this, oldBaseUrl] { d->data->setBaseUrl(oldBaseUrl, this); });
     d->resolverJob.onResult(this, [this, maybeBaseUrl]() mutable {
         if (d->resolverJob->error() != BaseJob::NotFound) {
             if (!d->resolverJob->status().good()) {
@@ -306,7 +306,7 @@ void Connection::Private::loginToServer(LoginArgTs&&... loginArgs)
 
 void Connection::Private::completeSetup(const QString& mxId, bool mock)
 {
-    data->setUserId(mxId);
+    data->setUserId(mxId, q);
     q->setObjectName(data->userId() % u'/' % data->deviceId());
     qCDebug(MAIN) << "Using server" << data->baseUrl().toDisplayString()
                   << "by user" << data->userId()
@@ -1419,7 +1419,7 @@ QFuture<QList<LoginFlow>> Connection::setHomeserver(const QUrl& baseUrl)
     d->loginFlows.clear();
 
     if (homeserver() != baseUrl) {
-        d->data->setBaseUrl(baseUrl);
+        d->data->setBaseUrl(baseUrl, this);
         emit homeserverChanged(homeserver());
     }
 

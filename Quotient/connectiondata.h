@@ -14,6 +14,7 @@ namespace Quotient {
 
 class NetworkAccessManager;
 class BaseJob;
+class Connection;
 
 class QUOTIENT_API ConnectionData {
 public:
@@ -31,10 +32,10 @@ public:
     HomeserverData homeserverData() const;
     Quotient::NetworkAccessManager *nam() const;
 
-    void setBaseUrl(QUrl baseUrl);
+    void setBaseUrl(QUrl baseUrl, Connection* connection);
     void setToken(QByteArray accessToken);
     void setDeviceId(const QString& deviceId);
-    void setUserId(const QString& userId);
+    void setUserId(const QString& userId, Connection* connection);
     void setSupportedSpecVersions(QStringList versions);
 
     QString lastEvent() const;

@@ -112,13 +112,13 @@ NetworkAccessManager* ConnectionData::nam() const
     return NetworkAccessManager::instance();
 }
 
-void ConnectionData::setBaseUrl(QUrl baseUrl)
+void ConnectionData::setBaseUrl(QUrl baseUrl, Connection* connection)
 {
     d->baseUrl = std::move(baseUrl);
     qCDebug(MAIN) << "updated baseUrl to" << d->baseUrl;
     if (!d->userId.isEmpty()) {
         if (d->baseUrl.isValid())
-            NetworkAccessManager::addAccount(d->userId, d->baseUrl);
+            NetworkAccessManager::addAccount(d->userId, d->baseUrl, connection);
         else
             NetworkAccessManager::dropAccount(d->userId);
     }
@@ -138,13 +138,13 @@ void ConnectionData::setDeviceId(const QString& deviceId)
     d->deviceId = deviceId;
 }
 
-void ConnectionData::setUserId(const QString& userId)
+void ConnectionData::setUserId(const QString& userId, Connection* connection)
 {
     if (d->baseUrl.isValid()) {
         if (d->userId != userId)
             NetworkAccessManager::dropAccount(d->userId);
         if (!userId.isEmpty())
-            NetworkAccessManager::addAccount(userId, d->baseUrl);
+            NetworkAccessManager::addAccount(userId, d->baseUrl, connection);
     }
     d->userId = userId;
 }

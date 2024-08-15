@@ -8,13 +8,14 @@
 #include <QtNetwork/QNetworkAccessManager>
 
 namespace Quotient {
+class Connection;
 
 class QUOTIENT_API NetworkAccessManager : public QNetworkAccessManager {
     Q_OBJECT
 public:
     using QNetworkAccessManager::QNetworkAccessManager;
 
-    static void addAccount(QString accountId, QUrl homeserver);
+    static void addAccount(QString accountId, QUrl homeserver, Connection *connection);
     static void updateAccountSpecVersions(QStringView accountId, QStringList versions);
     static void dropAccount(QStringView accountId);
 
